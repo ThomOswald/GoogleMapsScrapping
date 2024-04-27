@@ -1,79 +1,67 @@
 from selenium import webdriver
-import pyautogui
-from bs4 import BeautifulSoup
 import time
-import pandas as pd
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup
+import pandas as pd
 
-filename = "data"
+filename = "data.csv"
 link = "https://www.google.com/maps/search/electrician+in+Chicago,+IL,+USA/@41.8336478,-87.8720473,11z/data=!3m1!4b1"
 
 browser = webdriver.Chrome()
 record = []
-e = []
-le = 0
 
 def Selenium_extractor():
-
     action = ActionChains(browser)
-    a = browser.find_elements(By.CLASS_NAME, "hfpxzc")
-
-    while len(a) < 1000:
-        print(len(a))
-        var = len(a)
-        scroll_origin = ScrollOrigin.from_element(a[len(a)-1])
-        action.scroll_from_origin(scroll_origin, 0, 1000).perform()
-        time.sleep(2)
+    wait = WebDriverWait(browser, 10)  # Adjust timeout as needed
+    
+    browser.get(str(link))
+    time.sleep(10)
+    
+    try:
         a = browser.find_elements(By.CLASS_NAME, "hfpxzc")
+        len_a = len(a)
 
-        if len(a) == var:
-            le+=1
-            if le > 20:
-                break
-        else:
-            le = 0
+        for i in range(100):
+            scroll_origin = ScrollOrigin.from_element(a[i])
+            action.scroll_from_origin(scroll_origin, 0, 100).perform()
+            action.move_to_element(a[i]).perform()
+            
+            wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "hfpxzc")))
+            a[i].click()
 
-    for i in range(len(a)):
-        scroll_origin = ScrollOrigin.from_element(a[i])
-        action.scroll_from_origin(scroll_origin, 0, 100).perform()
-        action.move_to_element(a[i]).perform()
-        a[i].click()
-        time.sleep(2)
-        source = browser.page_source
-        soup = BeautifulSoup(source, 'html.parser')
-        try:
-            Name_Html = soup.findAll('h1', {"class": "DUwDvf fontHeadlineLarge"})
+            time.sleep(2)  # Adjust as needed
+            source = browser.page_source
+            soup = BeautifulSoup(source, 'html.parser')
+            
+            # Extract text from the specified XPath
+            xpath = "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[3]/div/div[1]/div/div/div[2]"
+            
+            popup_element = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, xpath)))
+            popup_text = popup_element.text
+            print("Text from popup:", popup_text)
+            record.append(popup_text)  # Append extracted text to record list
+            
+            # Go back to clicking through the list
+            # browser.back()
+            time.sleep(5)  # Add a delay before proceeding to the next iteration
+            a = browser.find_elements(By.CLASS_NAME, "hfpxzc")
+            print(f"The length of the record is: {len(record)}")
+    
+    except Exception as e:
+        print("An error occurred:", e)
+        pass
 
-            name = Name_Html[0].text
-            if name not in e:
-                e.append(name)
-                divs = soup.findAll('div', {"class": "Io6YTe fontBodyMedium"})
-                for j in range(len(divs)):
-                    if str(divs[j].text)[0] == "+":
-                        phone = divs[j].text
-
-                Address_Html= divs[0]
-                address=Address_Html.text
-                try:
-                    for z in range(len(divs)):
-                        if str(divs[z].text)[-4] == "." or str(divs[z].text)[-3] == ".":
-                            website = divs[z].text
-                except:
-                    website="Not available"
-                print([name,phone,address,website])
-                record.append((name,phone,address,website))
-                df=pd.DataFrame(record,columns=['Name','Phone number','Address','Website'])  # writing data to the file
-                df.to_csv(filename + '.csv',index=False,encoding='utf-8')
-        except:
-            print("error")
-            continue
-
-
-
-
-
-browser.get(str(link))
-time.sleep(10)
+# Perform scraping
 Selenium_extractor()
+
+# Create DataFrame from record list
+df = pd.DataFrame({"Text": record})
+
+# Export DataFrame to CSV file
+df.to_csv(filename, index=False)
+
+print("Data saved to", filename)
