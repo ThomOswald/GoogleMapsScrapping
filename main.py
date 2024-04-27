@@ -8,8 +8,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import pandas as pd
 
+business = "barber"
+zip_code = "30543"
 filename = "data.csv"
-link = "https://www.google.com/maps/search/electrician+in+Chicago,+IL,+USA/@41.8336478,-87.8720473,11z/data=!3m1!4b1"
+link = f"https://www.google.com/maps/search/{business}+in+{zip_code}/"
 
 browser = webdriver.Chrome()
 record = []
